@@ -1,0 +1,18 @@
+{
+  "name": "bracefox-blessurewijzer",
+  "version": "2.0.0",
+  "description": "AI-powered injury advisor for Bracefox",
+  "scripts": {
+    "build:css": "echo 'CSS build placeholder'",
+    "build:js": "echo 'JS build placeholder'",
+    "watch": "echo 'Watch placeholder'"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "ai",
+    "health"
+  ],
+  "author": "Bracefox",
+  "license": "GPL-2.0-or-later"
+}
