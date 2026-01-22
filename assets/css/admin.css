@@ -1,0 +1,191 @@
+/**
+ * Bracefox Blessurewijzer 2.0 - Admin Styles
+ */
+
+/* Admin Container */
+.bw-admin-wrap {
+    margin: 20px 20px 0 0;
+}
+
+.bw-admin-container {
+    display: flex;
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.bw-admin-main {
+    flex: 1;
+}
+
+.bw-admin-sidebar {
+    width: 300px;
+    flex-shrink: 0;
+}
+
+.bw-admin-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.bw-admin-box h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.bw-admin-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.bw-admin-box li {
+    margin-bottom: 8px;
+}
+
+.bw-admin-box code {
+    display: block;
+    background: #f0f0f1;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin: 10px 0;
+}
+
+/* Test Connection & Cache */
+.bw-test-connection,
+.bw-cache-controls {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.bw-test-connection h2,
+.bw-cache-controls h2 {
+    margin-top: 0;
+    font-size: 18px;
+}
+
+/* Analytics Dashboard */
+.bw-analytics-grid {
+    margin-top: 20px;
+}
+
+.bw-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.bw-stat-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.bw-stat-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+}
+
+.bw-stat-content {
+    flex: 1;
+}
+
+.bw-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1d2327;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.bw-stat-label {
+    font-size: 13px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Dashboard Sections */
+.bw-dashboard-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.bw-dashboard-section h2 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Table */
+.bw-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.bw-table th {
+    text-align: left;
+    padding: 12px;
+    background: #f6f7f7;
+    border-bottom: 2px solid #ccd0d4;
+    font-weight: 600;
+}
+
+.bw-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.bw-product-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bw-product-cell img {
+    border-radius: 4px;
+}
+
+/* Word Cloud */
+.bw-word-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    padding: 20px;
+}
+
+.bw-word {
+    color: #f97316;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .bw-admin-container {
+        flex-direction: column;
+    }
+
+    .bw-admin-sidebar {
+        width: 100%;
+    }
+
+    .bw-stats-row {
+        grid-template-columns: 1fr;
+    }
+}
