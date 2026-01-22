@@ -104,6 +104,8 @@ class Bracefox_BW_Plugin {
 
         // Admin AJAX endpoints
         add_action('wp_ajax_bw_get_analytics', array($ajax_handler, 'get_analytics'));
+        add_action('wp_ajax_bw_test_connection', array($ajax_handler, 'test_connection'));
+        add_action('wp_ajax_bw_clear_cache', array($ajax_handler, 'clear_cache'));
     }
 
     /**

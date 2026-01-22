@@ -235,6 +235,64 @@ class Bracefox_BW_Ajax_Handler {
     }
 
     /**
+     * Test API connection (admin only)
+     */
+    public function test_connection() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array(
+                'message' => __('Unauthorized.', 'bracefox-blessurewijzer'),
+            ), 403);
+        }
+
+        // Verify nonce
+        if (!check_ajax_referer('bw_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(array(
+                'message' => __('Security check failed.', 'bracefox-blessurewijzer'),
+            ), 403);
+        }
+
+        $result = $this->ai_client->test_connection();
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(array(
+                'message' => $result->get_error_message(),
+            ));
+        }
+
+        wp_send_json_success(array(
+            'message' => __('Connection successful!', 'bracefox-blessurewijzer'),
+        ));
+    }
+
+    /**
+     * Clear cache (admin only)
+     */
+    public function clear_cache() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array(
+                'message' => __('Unauthorized.', 'bracefox-blessurewijzer'),
+            ), 403);
+        }
+
+        // Verify nonce
+        if (!check_ajax_referer('bw_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(array(
+                'message' => __('Security check failed.', 'bracefox-blessurewijzer'),
+            ), 403);
+        }
+
+        // Clear all product and blog caches
+        delete_transient('bw_all_products');
+        delete_transient('bw_all_blogs');
+
+        wp_send_json_success(array(
+            'message' => __('Cache cleared successfully!', 'bracefox-blessurewijzer'),
+        ));
+    }
+
+    /**
      * Detect severe symptoms in user message
      *
      * @param string $message User message
