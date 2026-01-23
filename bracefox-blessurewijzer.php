@@ -59,6 +59,37 @@ register_deactivation_hook(__FILE__, 'deactivate_bracefox_blessurewijzer');
 require BRACEFOX_BW_PLUGIN_DIR . 'includes/class-plugin.php';
 
 /**
+ * Render the blessurewijzer shortcode.
+ * This is a standalone function to ensure maximum compatibility.
+ *
+ * @param array $atts Shortcode attributes
+ * @return string Rendered HTML
+ */
+function bracefox_blessurewijzer_shortcode_render($atts) {
+    // Load shortcode class if not already loaded
+    if (!class_exists('Bracefox_BW_Shortcode')) {
+        require_once BRACEFOX_BW_PLUGIN_DIR . 'includes/frontend/class-shortcode.php';
+    }
+
+    $shortcode = new Bracefox_BW_Shortcode('bracefox-blessurewijzer', BRACEFOX_BW_VERSION);
+    return $shortcode->render($atts);
+}
+
+/**
+ * Register shortcode early and reliably.
+ */
+function bracefox_blessurewijzer_register_shortcode() {
+    add_shortcode('blessurewijzer', 'bracefox_blessurewijzer_shortcode_render');
+}
+
+// Register shortcode on init with high priority, or immediately if init already fired
+if (did_action('init')) {
+    bracefox_blessurewijzer_register_shortcode();
+} else {
+    add_action('init', 'bracefox_blessurewijzer_register_shortcode', 1);
+}
+
+/**
  * Begins execution of the plugin.
  *
  * Uses plugins_loaded hook to ensure all plugins are loaded,
