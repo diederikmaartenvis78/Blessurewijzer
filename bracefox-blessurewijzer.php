@@ -60,9 +60,19 @@ require BRACEFOX_BW_PLUGIN_DIR . 'includes/class-plugin.php';
 
 /**
  * Begins execution of the plugin.
+ *
+ * Uses plugins_loaded hook to ensure all plugins are loaded,
+ * or runs immediately if plugins_loaded has already fired.
  */
 function run_bracefox_blessurewijzer() {
-    $plugin = new Bracefox_BW_Plugin();
-    $plugin->run();
+    global $bracefox_blessurewijzer;
+    $bracefox_blessurewijzer = new Bracefox_BW_Plugin();
+    $bracefox_blessurewijzer->run();
 }
-run_bracefox_blessurewijzer();
+
+// Run on plugins_loaded to ensure proper WordPress initialization
+if (did_action('plugins_loaded')) {
+    run_bracefox_blessurewijzer();
+} else {
+    add_action('plugins_loaded', 'run_bracefox_blessurewijzer');
+}

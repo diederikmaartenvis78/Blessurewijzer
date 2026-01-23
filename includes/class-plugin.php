@@ -32,8 +32,12 @@ class Bracefox_BW_Plugin {
         $this->define_admin_hooks();
         $this->define_ajax_hooks();
 
-        // Register shortcode on init hook to ensure WordPress is fully loaded
-        add_action('init', array($this, 'define_frontend_hooks'));
+        // Register shortcode - use init hook if not yet fired, otherwise register immediately
+        if (did_action('init')) {
+            $this->define_frontend_hooks();
+        } else {
+            add_action('init', array($this, 'define_frontend_hooks'), 1);
+        }
     }
 
     /**
