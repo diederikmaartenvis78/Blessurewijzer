@@ -87,11 +87,20 @@ class Bracefox_BW_Shortcode {
      * Called when shortcode is actually rendered (ensures compatibility with page builders)
      */
     private function enqueue_assets() {
+        // Enqueue Inter font from Google Fonts
+        wp_enqueue_style(
+            $this->plugin_name . '-font',
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+            array(),
+            null,
+            'all'
+        );
+
         // Enqueue CSS
         wp_enqueue_style(
             $this->plugin_name,
             BRACEFOX_BW_PLUGIN_URL . 'assets/css/frontend.css',
-            array(),
+            array($this->plugin_name . '-font'),
             $this->version,
             'all'
         );
@@ -123,6 +132,8 @@ class Bracefox_BW_Shortcode {
                         'error_empty_message' => __('Typ eerst een bericht.', 'bracefox-blessurewijzer'),
                         'new_question' => __('Stel een andere vraag', 'bracefox-blessurewijzer'),
                         'send' => __('Verstuur', 'bracefox-blessurewijzer'),
+                        'more_info' => __('Meer info', 'bracefox-blessurewijzer'),
+                        'less_info' => __('Minder info', 'bracefox-blessurewijzer'),
                     ),
                 )
             );

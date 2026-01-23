@@ -1,10 +1,21 @@
 /**
- * Bracefox Blessurewijzer 2.0 - Frontend JavaScript
- * Handles chat interactions and UI updates
+ * Bracefox Blessurewijzer 3.0 - Frontend JavaScript
+ * Professional UI/UX implementation
+ *
+ * Features:
+ * - Smart auto-scroll (only when near bottom)
+ * - Respects prefers-reduced-motion
+ * - Proper loading states with stepper
+ * - Singleton pattern for widget
  */
 
 (function($) {
     'use strict';
+
+    /**
+     * Check if user prefers reduced motion
+     */
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     /**
      * Main Chat Handler
@@ -14,32 +25,42 @@
         sessionId: null,
         conversationHistory: [],
         isProcessing: false,
-        loadingStartTime: null,
         loadingTimeout: null,
+        stepperTimeout: null,
 
         // DOM elements
-        $widget: null,
-        $form: null,
-        $input: null,
-        $sendButton: null,
-        $messages: null,
-        $loading: null,
-        $welcome: null,
+        elements: {},
+
+        // Scroll threshold (pixels from bottom to auto-scroll)
+        scrollThreshold: 100,
 
         /**
          * Initialize the chat
          */
         init: function() {
-            this.$widget = $('#bw-widget');
-            this.$form = $('#bw-chat-form');
-            this.$input = $('#bw-input');
-            this.$sendButton = $('#bw-send-button');
-            this.$messages = $('#bw-messages');
-            this.$loading = $('#bw-loading');
-            this.$welcome = $('#bw-welcome');
+            // Cache DOM elements
+            this.elements = {
+                widget: $('#bw-widget'),
+                form: $('#bw-chat-form'),
+                input: $('#bw-input'),
+                sendButton: $('#bw-send-button'),
+                chatBody: $('#bw-chat-body'),
+                messages: $('#bw-messages'),
+                welcome: $('#bw-welcome'),
+                typing: $('#bw-typing'),
+                stepper: $('#bw-stepper'),
+                disclaimerToggle: $('#bw-disclaimer-toggle'),
+                disclaimerExpanded: $('#bw-disclaimer-expanded'),
+                headerInfo: $('#bw-header-info')
+            };
+
+            // Only initialize if widget exists
+            if (this.elements.widget.length === 0) {
+                return;
+            }
 
             this.bindEvents();
-            this.autoResizeTextarea();
+            this.initTextareaResize();
         },
 
         /**
@@ -49,37 +70,93 @@
             const self = this;
 
             // Form submission
-            this.$form.on('submit', function(e) {
+            this.elements.form.on('submit', function(e) {
                 e.preventDefault();
                 self.handleSendMessage();
             });
 
+            // Enter to send (Shift+Enter for new line)
+            this.elements.input.on('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    self.elements.form.trigger('submit');
+                }
+            });
+
+            // Textarea auto-resize on input
+            this.elements.input.on('input', function() {
+                self.resizeTextarea();
+            });
+
             // New question button (delegated)
-            this.$widget.on('click', '#bw-new-question', function(e) {
+            this.elements.widget.on('click', '#bw-new-question', function(e) {
                 e.preventDefault();
                 self.handleNewQuestion();
             });
 
             // Product click tracking (delegated)
-            this.$widget.on('click', '.bw-product-button', function(e) {
+            this.elements.widget.on('click', '.bw-product__button', function(e) {
                 const productId = $(this).data('product-id');
                 if (productId) {
                     self.trackProductClick(productId);
                 }
             });
 
-            // Textarea auto-resize
-            this.$input.on('input', function() {
-                self.autoResizeTextarea();
+            // Disclaimer toggle
+            this.elements.disclaimerToggle.on('click', function() {
+                self.toggleDisclaimer();
             });
 
-            // Enter to send (Shift+Enter for new line)
-            this.$input.on('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    self.$form.trigger('submit');
-                }
+            // Header info button (shows disclaimer)
+            this.elements.headerInfo.on('click', function() {
+                self.toggleDisclaimer();
+                // Scroll disclaimer into view
+                self.elements.widget.find('.bw-disclaimer')[0]?.scrollIntoView({
+                    behavior: prefersReducedMotion ? 'auto' : 'smooth'
+                });
             });
+        },
+
+        /**
+         * Toggle disclaimer expanded state
+         */
+        toggleDisclaimer: function() {
+            const $expanded = this.elements.disclaimerExpanded;
+            const $toggle = this.elements.disclaimerToggle;
+            const isExpanded = $expanded.hasClass('is-visible');
+
+            if (isExpanded) {
+                $expanded.removeClass('is-visible');
+                $toggle.attr('aria-expanded', 'false');
+                $toggle.text(bracefoxBW.i18n.more_info || 'Meer info');
+            } else {
+                $expanded.addClass('is-visible');
+                $toggle.attr('aria-expanded', 'true');
+                $toggle.text(bracefoxBW.i18n.less_info || 'Minder info');
+            }
+        },
+
+        /**
+         * Initialize textarea auto-resize
+         */
+        initTextareaResize: function() {
+            // Set initial height
+            this.resizeTextarea();
+        },
+
+        /**
+         * Resize textarea based on content
+         */
+        resizeTextarea: function() {
+            const textarea = this.elements.input[0];
+            if (!textarea) return;
+
+            // Reset height to auto to get correct scrollHeight
+            textarea.style.height = 'auto';
+
+            // Calculate new height (max 120px as defined in CSS)
+            const newHeight = Math.min(textarea.scrollHeight, 120);
+            textarea.style.height = newHeight + 'px';
         },
 
         /**
@@ -90,7 +167,7 @@
                 return;
             }
 
-            const message = this.$input.val().trim();
+            const message = this.elements.input.val().trim();
 
             if (!message) {
                 this.showError(bracefoxBW.i18n.error_empty_message);
@@ -106,14 +183,29 @@
                 content: message
             });
 
-            // Clear input
-            this.$input.val('').trigger('input');
+            // Clear input and reset height
+            this.elements.input.val('');
+            this.resizeTextarea();
 
             // Hide welcome message
-            this.$welcome.fadeOut(300);
+            this.hideWelcome();
 
             // Send to server
             this.sendToAI(message);
+        },
+
+        /**
+         * Hide welcome message
+         */
+        hideWelcome: function() {
+            const $welcome = this.elements.welcome;
+            if ($welcome.is(':visible')) {
+                if (prefersReducedMotion) {
+                    $welcome.hide();
+                } else {
+                    $welcome.fadeOut(200);
+                }
+            }
         },
 
         /**
@@ -123,8 +215,13 @@
             const self = this;
 
             this.isProcessing = true;
-            this.$sendButton.prop('disabled', true);
-            this.showLoading();
+            this.elements.sendButton.prop('disabled', true);
+            this.showTypingIndicator();
+
+            // Switch to stepper after 2 seconds
+            this.loadingTimeout = setTimeout(function() {
+                self.showStepper();
+            }, 2000);
 
             $.ajax({
                 url: bracefoxBW.ajax_url,
@@ -152,10 +249,94 @@
                 },
                 complete: function() {
                     self.isProcessing = false;
-                    self.$sendButton.prop('disabled', false);
-                    self.hideLoading();
+                    self.elements.sendButton.prop('disabled', false);
+                    self.hideLoadingStates();
                 }
             });
+        },
+
+        /**
+         * Show typing indicator
+         */
+        showTypingIndicator: function() {
+            this.elements.typing.removeClass('bw-hidden');
+            this.scrollToBottomIfNeeded();
+        },
+
+        /**
+         * Show stepper for long-running requests
+         */
+        showStepper: function() {
+            const self = this;
+
+            // Hide typing, show stepper
+            this.elements.typing.addClass('bw-hidden');
+            this.elements.stepper.removeClass('bw-hidden');
+
+            // Reset stepper state
+            this.elements.stepper.find('.bw-stepper__item')
+                .removeClass('bw-stepper__item--active bw-stepper__item--done')
+                .addClass('bw-stepper__item--pending');
+
+            // Animate through steps
+            this.animateStep(1, 0);
+            this.animateStep(2, 1200);
+            this.animateStep(3, 2400);
+
+            this.scrollToBottomIfNeeded();
+        },
+
+        /**
+         * Animate a stepper step
+         */
+        animateStep: function(stepNumber, delay) {
+            const self = this;
+
+            this.stepperTimeout = setTimeout(function() {
+                if (!self.isProcessing) return;
+
+                const $steps = self.elements.stepper.find('.bw-stepper__item');
+
+                // Mark previous steps as done
+                $steps.filter(function() {
+                    return $(this).data('step') < stepNumber;
+                }).removeClass('bw-stepper__item--pending bw-stepper__item--active')
+                  .addClass('bw-stepper__item--done')
+                  .find('.bw-stepper__indicator').html('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" /></svg>');
+
+                // Mark current step as active
+                $steps.filter('[data-step="' + stepNumber + '"]')
+                    .removeClass('bw-stepper__item--pending')
+                    .addClass('bw-stepper__item--active');
+
+            }, delay);
+        },
+
+        /**
+         * Hide all loading states
+         */
+        hideLoadingStates: function() {
+            // Clear timeouts
+            if (this.loadingTimeout) {
+                clearTimeout(this.loadingTimeout);
+                this.loadingTimeout = null;
+            }
+            if (this.stepperTimeout) {
+                clearTimeout(this.stepperTimeout);
+                this.stepperTimeout = null;
+            }
+
+            // Hide indicators
+            this.elements.typing.addClass('bw-hidden');
+            this.elements.stepper.addClass('bw-hidden');
+
+            // Reset stepper
+            this.elements.stepper.find('.bw-stepper__item')
+                .removeClass('bw-stepper__item--active bw-stepper__item--done')
+                .addClass('bw-stepper__item--pending')
+                .find('.bw-stepper__indicator').each(function(index) {
+                    $(this).text(index + 1);
+                });
         },
 
         /**
@@ -182,8 +363,7 @@
                 this.renderAdviceCard(response);
             }
 
-            // Scroll to bottom
-            this.scrollToBottom();
+            this.scrollToBottomIfNeeded();
         },
 
         /**
@@ -198,41 +378,59 @@
          * Add user message to chat
          */
         addUserMessage: function(message) {
-            const $message = $('<div class="bw-message bw-message-user">' +
-                '<div class="bw-message-user-bubble">' + this.escapeHtml(message) + '</div>' +
-                '</div>');
+            const html = '<div class="bw-message bw-message--user">' +
+                '<div class="bw-message__bubble--user">' + this.escapeHtml(message) + '</div>' +
+                '</div>';
 
-            this.$messages.append($message);
-            this.scrollToBottom();
+            this.elements.messages.append(html);
+            this.scrollToBottomIfNeeded();
         },
 
         /**
          * Add assistant message to chat
          */
         addAssistantMessage: function(message) {
-            const $message = $('<div class="bw-message bw-message-assistant">' +
-                '<div class="bw-message-assistant-bubble">' + this.escapeHtml(message) + '</div>' +
-                '</div>');
+            const html = '<div class="bw-message bw-message--assistant">' +
+                '<div class="bw-message__bubble--assistant">' + this.escapeHtml(message) + '</div>' +
+                '</div>';
 
-            this.$messages.append($message);
-            this.scrollToBottom();
+            this.elements.messages.append(html);
+            this.scrollToBottomIfNeeded();
+        },
+
+        /**
+         * Show error message
+         */
+        showError: function(message) {
+            const html = '<div class="bw-error">' +
+                '<div class="bw-error__icon">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">' +
+                '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />' +
+                '</svg>' +
+                '</div>' +
+                '<p class="bw-error__message">' + this.escapeHtml(message) + '</p>' +
+                '</div>';
+
+            this.elements.messages.append(html);
+            this.scrollToBottomIfNeeded();
         },
 
         /**
          * Render full advice card
          */
         renderAdviceCard: function(advice) {
+            const self = this;
             const $template = $('#bw-advice-template');
             const $card = $($template.html()).clone();
 
-            // Personal message
+            // Personal message first
             if (advice.personal_message) {
                 this.addAssistantMessage(advice.personal_message);
             }
 
             // Severity warning
             if (advice.severity_warning) {
-                $card.find('.bw-severity-warning').show();
+                $card.find('[data-element="severity"]').removeClass('bw-hidden');
             }
 
             // Product recommendation
@@ -240,18 +438,18 @@
                 const product = advice.product_recommendation.product_data;
                 const reasoning = advice.product_recommendation.reasoning;
 
-                $card.find('.bw-product-image img').attr({
+                $card.find('[data-element="product-image"]').attr({
                     src: product.image,
                     alt: product.name
                 });
-                $card.find('.bw-product-name').text(product.name);
-                $card.find('.bw-product-reasoning').text(reasoning);
-                $card.find('.bw-product-price').text('€' + product.price.toFixed(2));
-                $card.find('.bw-product-button')
+                $card.find('[data-element="product-name"]').text(product.name);
+                $card.find('[data-element="product-reasoning"]').text(reasoning);
+                $card.find('[data-element="product-price"]').text('€' + parseFloat(product.price).toFixed(2).replace('.', ','));
+                $card.find('[data-element="product-link"]')
                     .attr('href', product.url)
                     .data('product-id', product.id);
             } else {
-                $card.find('.bw-product-section').hide();
+                $card.find('[data-element="product"]').hide();
             }
 
             // Health advice
@@ -260,145 +458,79 @@
 
                 // Exercises
                 if (health.exercises && health.exercises.length > 0) {
-                    const $exercisesList = $card.find('.bw-exercises-list');
+                    const $exercisesList = $card.find('[data-element="exercises-list"]');
                     $exercisesList.empty();
 
                     health.exercises.forEach(function(exercise) {
-                        const $exercise = $('<div class="bw-exercise">' +
-                            '<div class="bw-exercise-name">' + BracefoxChat.escapeHtml(exercise.name) + '</div>' +
-                            '<div class="bw-exercise-description">' + BracefoxChat.escapeHtml(exercise.description) + '</div>' +
-                            '<div class="bw-exercise-meta">' +
-                            BracefoxChat.escapeHtml(exercise.duration) + ' • ' +
-                            BracefoxChat.escapeHtml(exercise.frequency) +
+                        const exerciseHtml = '<div class="bw-exercise">' +
+                            '<div class="bw-exercise__name">' + self.escapeHtml(exercise.name) + '</div>' +
+                            '<div class="bw-exercise__description">' + self.escapeHtml(exercise.description) + '</div>' +
+                            '<div class="bw-exercise__meta">' +
+                            self.escapeHtml(exercise.duration) + ' · ' +
+                            self.escapeHtml(exercise.frequency) +
                             '</div>' +
-                            '</div>');
-                        $exercisesList.append($exercise);
+                            '</div>';
+                        $exercisesList.append(exerciseHtml);
                     });
+                } else {
+                    $card.find('[data-element="exercises-card"]').hide();
                 }
 
                 // Thermal advice
                 if (health.thermal_advice) {
-                    const $thermalContent = $card.find('.bw-thermal-content');
-                    $thermalContent.html(
-                        '<p><strong>' + this.escapeHtml(health.thermal_advice.method === 'koelen' ? '❄️ Koelen' : '🔥 Verwarmen') + '</strong></p>' +
-                        '<p>' + this.escapeHtml(health.thermal_advice.explanation) + '</p>' +
-                        '<p><em>' + this.escapeHtml(health.thermal_advice.duration) + '</em></p>'
-                    );
+                    const thermal = health.thermal_advice;
+                    const methodIcon = thermal.method === 'koelen' ? '❄️' : '🔥';
+                    const methodText = thermal.method === 'koelen' ? 'Koelen' : 'Verwarmen';
+
+                    const thermalHtml = '<p><strong>' + methodIcon + ' ' + methodText + '</strong></p>' +
+                        '<p>' + this.escapeHtml(thermal.explanation) + '</p>' +
+                        '<p><em>' + this.escapeHtml(thermal.duration) + '</em></p>';
+
+                    $card.find('[data-element="thermal-content"]').html(thermalHtml);
+                } else {
+                    $card.find('[data-element="thermal-card"]').hide();
                 }
 
                 // Rest advice
                 if (health.rest_advice) {
-                    const $restContent = $card.find('.bw-rest-content');
-                    $restContent.html('<p>' + this.escapeHtml(health.rest_advice) + '</p>');
+                    $card.find('[data-element="rest-content"]').html('<p>' + this.escapeHtml(health.rest_advice) + '</p>');
+                } else {
+                    $card.find('[data-element="rest-card"]').hide();
                 }
 
                 // Lifestyle tips
                 if (health.lifestyle_tips && health.lifestyle_tips.length > 0) {
-                    const $lifestyleContent = $card.find('.bw-lifestyle-content');
                     let tipsHtml = '<ul>';
                     health.lifestyle_tips.forEach(function(tip) {
-                        tipsHtml += '<li>' + BracefoxChat.escapeHtml(tip) + '</li>';
+                        tipsHtml += '<li>' + self.escapeHtml(tip) + '</li>';
                     });
                     tipsHtml += '</ul>';
-                    $lifestyleContent.html(tipsHtml);
+                    $card.find('[data-element="lifestyle-content"]').html(tipsHtml);
                 } else {
-                    $card.find('.bw-health-card').eq(3).hide();
+                    $card.find('[data-element="lifestyle-card"]').hide();
                 }
+            } else {
+                $card.find('[data-element="health"]').hide();
             }
 
             // Related blogs
             if (advice.related_blogs_data && advice.related_blogs_data.length > 0) {
-                const $blogsList = $card.find('.bw-blogs-list');
+                const $blogsList = $card.find('[data-element="blogs-list"]');
                 $blogsList.empty();
 
                 advice.related_blogs_data.forEach(function(blog) {
-                    const $blog = $('<div>' +
-                        '• <a href="' + blog.url + '" class="bw-blog-link" target="_blank">' +
-                        BracefoxChat.escapeHtml(blog.title) +
-                        '</a>' +
-                        '</div>');
-                    $blogsList.append($blog);
+                    const blogHtml = '<a href="' + self.escapeHtml(blog.url) + '" class="bw-blogs__link" target="_blank" rel="noopener">' +
+                        self.escapeHtml(blog.title) +
+                        '</a>';
+                    $blogsList.append(blogHtml);
                 });
 
-                $card.find('.bw-blogs-section').show();
+                $card.find('[data-element="blogs"]').removeClass('bw-hidden');
             }
 
             // Add card to messages
-            this.$messages.append($card);
-            this.scrollToBottom();
-        },
-
-        /**
-         * Show loading indicator
-         */
-        showLoading: function() {
-            this.loadingStartTime = Date.now();
-            this.$loading.show();
-            $('#bw-loading-simple').show();
-            $('#bw-loading-premium').hide();
-
-            // Switch to premium loading after 2 seconds
-            const self = this;
-            this.loadingTimeout = setTimeout(function() {
-                self.showPremiumLoading();
-            }, 2000);
-        },
-
-        /**
-         * Show premium loading animation
-         */
-        showPremiumLoading: function() {
-            $('#bw-loading-simple').hide();
-            $('#bw-loading-premium').show();
-
-            // Animate steps
-            this.animateLoadingStep(1, 0);
-            this.animateLoadingStep(2, 1000);
-            this.animateLoadingStep(3, 2000);
-        },
-
-        /**
-         * Animate a loading step
-         */
-        animateLoadingStep: function(stepNumber, delay) {
-            setTimeout(function() {
-                const $step = $('.bw-loading-step[data-step="' + stepNumber + '"]');
-                $step.addClass('active');
-
-                setTimeout(function() {
-                    $step.removeClass('active').addClass('completed');
-                }, 800);
-            }, delay);
-        },
-
-        /**
-         * Hide loading indicator
-         */
-        hideLoading: function() {
-            if (this.loadingTimeout) {
-                clearTimeout(this.loadingTimeout);
-            }
-
-            this.$loading.hide();
-            $('#bw-loading-simple').show();
-            $('#bw-loading-premium').hide();
-
-            // Reset loading steps
-            $('.bw-loading-step').removeClass('active completed');
-        },
-
-        /**
-         * Show error message
-         */
-        showError: function(message) {
-            const $error = $('<div class="bw-message bw-message-assistant">' +
-                '<div class="bw-message-assistant-bubble" style="background: #fee; border-color: #fcc; color: #c00;">' +
-                '⚠️ ' + this.escapeHtml(message) +
-                '</div>' +
-                '</div>');
-
-            this.$messages.append($error);
-            this.scrollToBottom();
+            this.elements.messages.append($card);
+            this.scrollToBottomIfNeeded();
         },
 
         /**
@@ -406,17 +538,21 @@
          */
         handleNewQuestion: function() {
             // Clear messages
-            this.$messages.empty();
+            this.elements.messages.empty();
 
             // Reset conversation
             this.conversationHistory = [];
             this.sessionId = null;
 
             // Show welcome message
-            this.$welcome.fadeIn(300);
+            if (prefersReducedMotion) {
+                this.elements.welcome.show();
+            } else {
+                this.elements.welcome.fadeIn(200);
+            }
 
             // Focus input
-            this.$input.focus();
+            this.elements.input.focus();
 
             // Scroll to top
             this.scrollToTop();
@@ -439,32 +575,56 @@
         },
 
         /**
-         * Auto-resize textarea
+         * Check if user is near bottom of chat
          */
-        autoResizeTextarea: function() {
-            const $textarea = this.$input;
-            $textarea.css('height', 'auto');
-            const scrollHeight = $textarea[0].scrollHeight;
-            $textarea.css('height', Math.min(scrollHeight, 120) + 'px');
+        isNearBottom: function() {
+            const chatBody = this.elements.chatBody[0];
+            if (!chatBody) return true;
+
+            const scrollTop = chatBody.scrollTop;
+            const scrollHeight = chatBody.scrollHeight;
+            const clientHeight = chatBody.clientHeight;
+
+            return (scrollHeight - scrollTop - clientHeight) < this.scrollThreshold;
         },
 
         /**
-         * Scroll messages to bottom
+         * Scroll to bottom only if user is near bottom
          */
-        scrollToBottom: function() {
-            const $messagesContainer = this.$messages;
-            setTimeout(function() {
-                $messagesContainer.animate({
-                    scrollTop: $messagesContainer[0].scrollHeight
-                }, 300);
-            }, 100);
+        scrollToBottomIfNeeded: function() {
+            if (!this.isNearBottom()) {
+                return;
+            }
+
+            const chatBody = this.elements.chatBody[0];
+            if (!chatBody) return;
+
+            if (prefersReducedMotion) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            } else {
+                // Use native smooth scroll (respects CSS scroll-behavior)
+                chatBody.scrollTo({
+                    top: chatBody.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
         },
 
         /**
-         * Scroll messages to top
+         * Scroll to top of chat
          */
         scrollToTop: function() {
-            this.$messages.animate({ scrollTop: 0 }, 300);
+            const chatBody = this.elements.chatBody[0];
+            if (!chatBody) return;
+
+            if (prefersReducedMotion) {
+                chatBody.scrollTop = 0;
+            } else {
+                chatBody.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
         },
 
         /**
@@ -491,9 +651,7 @@
      * Initialize on document ready
      */
     $(document).ready(function() {
-        if ($('#bw-widget').length > 0) {
-            BracefoxChat.init();
-        }
+        BracefoxChat.init();
     });
 
 })(jQuery);
