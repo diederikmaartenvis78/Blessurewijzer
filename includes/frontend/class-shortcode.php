@@ -40,6 +40,9 @@ class Bracefox_BW_Shortcode {
             return '';
         }
 
+        // Enqueue assets when shortcode is rendered (fixes Elementor/page builder compatibility)
+        $this->enqueue_assets();
+
         // Check if WooCommerce is active
         if (!class_exists('WooCommerce')) {
             return '<div class="bw-error">' .
@@ -72,5 +75,52 @@ class Bracefox_BW_Shortcode {
 
         // Return buffered content
         return ob_get_clean();
+    }
+
+    /**
+     * Enqueue frontend assets
+     * Called when shortcode is actually rendered (ensures compatibility with page builders)
+     */
+    private function enqueue_assets() {
+        // Enqueue CSS
+        wp_enqueue_style(
+            $this->plugin_name,
+            BRACEFOX_BW_PLUGIN_URL . 'assets/css/frontend.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
+        // Enqueue JS
+        wp_enqueue_script(
+            $this->plugin_name,
+            BRACEFOX_BW_PLUGIN_URL . 'assets/js/frontend.js',
+            array('jquery'),
+            $this->version,
+            true
+        );
+
+        // Localize script (only if not already done)
+        if (!wp_script_is($this->plugin_name, 'localized')) {
+            wp_localize_script(
+                $this->plugin_name,
+                'bracefoxBW',
+                array(
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('bw_chat_nonce'),
+                    'i18n' => array(
+                        'thinking' => __('Even denken...', 'bracefox-blessurewijzer'),
+                        'analyzing' => __('Klacht analyseren', 'bracefox-blessurewijzer'),
+                        'searching' => __('Beste product zoeken', 'bracefox-blessurewijzer'),
+                        'composing' => __('Advies samenstellen', 'bracefox-blessurewijzer'),
+                        'error_generic' => __('Er ging iets mis. Probeer het opnieuw.', 'bracefox-blessurewijzer'),
+                        'error_rate_limited' => __('Je hebt te veel vragen gesteld. Wacht even en probeer het opnieuw.', 'bracefox-blessurewijzer'),
+                        'error_empty_message' => __('Typ eerst een bericht.', 'bracefox-blessurewijzer'),
+                        'new_question' => __('Stel een andere vraag', 'bracefox-blessurewijzer'),
+                        'send' => __('Verstuur', 'bracefox-blessurewijzer'),
+                    ),
+                )
+            );
+        }
     }
 }
