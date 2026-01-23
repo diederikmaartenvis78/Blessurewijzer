@@ -30,8 +30,10 @@ class Bracefox_BW_Plugin {
 
         $this->load_dependencies();
         $this->define_admin_hooks();
-        $this->define_frontend_hooks();
         $this->define_ajax_hooks();
+
+        // Register shortcode on init hook to ensure WordPress is fully loaded
+        add_action('init', array($this, 'define_frontend_hooks'));
     }
 
     /**
@@ -79,8 +81,9 @@ class Bracefox_BW_Plugin {
 
     /**
      * Register all of the hooks related to the public-facing functionality.
+     * Hooked to 'init' to ensure WordPress is fully loaded before registering shortcodes.
      */
-    private function define_frontend_hooks() {
+    public function define_frontend_hooks() {
         $shortcode = new Bracefox_BW_Shortcode($this->get_plugin_name(), $this->get_version());
         add_shortcode('blessurewijzer', array($shortcode, 'render'));
 
