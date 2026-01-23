@@ -66,13 +66,26 @@ require BRACEFOX_BW_PLUGIN_DIR . 'includes/class-plugin.php';
  * @return string Rendered HTML
  */
 function bracefox_blessurewijzer_shortcode_render($atts) {
+    // Debug mode - show diagnostic info for admins
+    $debug = '';
+    if (current_user_can('manage_options') && isset($_GET['bw_debug'])) {
+        $debug = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:15px;margin:10px 0;font-family:monospace;">';
+        $debug .= '<strong>Blessurewijzer Debug Info:</strong><br>';
+        $debug .= 'Plugin loaded: YES<br>';
+        $debug .= 'Shortcode registered: ' . (shortcode_exists('blessurewijzer') ? 'YES' : 'NO') . '<br>';
+        $debug .= 'WooCommerce active: ' . (class_exists('WooCommerce') ? 'YES' : 'NO') . '<br>';
+        $debug .= 'Plugin enabled: ' . (get_option('bracefox_bw_enabled', true) ? 'YES' : 'NO') . '<br>';
+        $debug .= 'API key set: ' . (!empty(get_option('bracefox_bw_api_key', '')) ? 'YES' : 'NO') . '<br>';
+        $debug .= '</div>';
+    }
+
     // Load shortcode class if not already loaded
     if (!class_exists('Bracefox_BW_Shortcode')) {
         require_once BRACEFOX_BW_PLUGIN_DIR . 'includes/frontend/class-shortcode.php';
     }
 
     $shortcode = new Bracefox_BW_Shortcode('bracefox-blessurewijzer', BRACEFOX_BW_VERSION);
-    return $shortcode->render($atts);
+    return $debug . $shortcode->render($atts);
 }
 
 /**
