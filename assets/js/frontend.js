@@ -50,8 +50,7 @@
                 typing: $('#bw-typing'),
                 stepper: $('#bw-stepper'),
                 disclaimerToggle: $('#bw-disclaimer-toggle'),
-                disclaimerExpanded: $('#bw-disclaimer-expanded'),
-                headerInfo: $('#bw-header-info')
+                disclaimerExpanded: $('#bw-disclaimer-expanded')
             };
 
             // Only initialize if widget exists
@@ -105,15 +104,6 @@
             // Disclaimer toggle
             this.elements.disclaimerToggle.on('click', function() {
                 self.toggleDisclaimer();
-            });
-
-            // Header info button (shows disclaimer)
-            this.elements.headerInfo.on('click', function() {
-                self.toggleDisclaimer();
-                // Scroll disclaimer into view
-                self.elements.widget.find('.bw-disclaimer')[0]?.scrollIntoView({
-                    behavior: prefersReducedMotion ? 'auto' : 'smooth'
-                });
             });
         },
 

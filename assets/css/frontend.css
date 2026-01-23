@@ -253,30 +253,6 @@
   margin: var(--space-1) 0 0 0;
 }
 
-.bw-header-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--color-gray-100);
-  border: none;
-  border-radius: var(--radius-full);
-  color: var(--color-gray-500);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.bw-header-info:hover {
-  background: var(--color-gray-200);
-  color: var(--color-gray-700);
-}
-
-.bw-header-info svg {
-  width: 16px;
-  height: 16px;
-}
-
 /* ============================================
    COMPONENT: CHAT BODY (Single Scroll Container)
    ============================================ */
