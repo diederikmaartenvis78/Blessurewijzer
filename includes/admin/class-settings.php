@@ -24,9 +24,20 @@ class Bracefox_BW_Settings {
         register_setting('bracefox_bw_settings', 'bracefox_bw_cache_ttl');
         register_setting('bracefox_bw_settings', 'bracefox_bw_rate_limit_max');
         register_setting('bracefox_bw_settings', 'bracefox_bw_rate_limit_window');
-        register_setting('bracefox_bw_settings', 'bracefox_bw_enabled');
+        register_setting('bracefox_bw_settings', 'bracefox_bw_enabled', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => array($this, 'sanitize_checkbox'),
+        ));
 
         // Add settings sections
+        add_settings_section(
+            'bracefox_bw_general_section',
+            __('General Settings', 'bracefox-blessurewijzer'),
+            array($this, 'general_section_callback'),
+            'bracefox-blessurewijzer-settings'
+        );
+
         add_settings_section(
             'bracefox_bw_api_section',
             __('API Configuration', 'bracefox-blessurewijzer'),
@@ -46,6 +57,15 @@ class Bracefox_BW_Settings {
             __('Security', 'bracefox-blessurewijzer'),
             array($this, 'security_section_callback'),
             'bracefox-blessurewijzer-settings'
+        );
+
+        // Add settings fields - General Section
+        add_settings_field(
+            'bracefox_bw_enabled',
+            __('Enable Plugin', 'bracefox-blessurewijzer'),
+            array($this, 'enabled_field_callback'),
+            'bracefox-blessurewijzer-settings',
+            'bracefox_bw_general_section'
         );
 
         // Add settings fields - API Section
@@ -119,6 +139,10 @@ class Bracefox_BW_Settings {
     /**
      * Section callbacks
      */
+    public function general_section_callback() {
+        echo '<p>' . esc_html__('General plugin settings.', 'bracefox-blessurewijzer') . '</p>';
+    }
+
     public function api_section_callback() {
         echo '<p>' . esc_html__('Configure OpenAI API settings for the AI chat functionality.', 'bracefox-blessurewijzer') . '</p>';
     }
@@ -134,6 +158,15 @@ class Bracefox_BW_Settings {
     /**
      * Field callbacks
      */
+    public function enabled_field_callback() {
+        $value = get_option('bracefox_bw_enabled', true);
+        echo '<label>';
+        echo '<input type="checkbox" name="bracefox_bw_enabled" value="1"' . checked($value, true, false) . ' />';
+        echo ' ' . esc_html__('Enable the Blessurewijzer chat widget', 'bracefox-blessurewijzer');
+        echo '</label>';
+        echo '<p class="description">' . esc_html__('Uncheck to temporarily disable the widget without deactivating the plugin.', 'bracefox-blessurewijzer') . '</p>';
+    }
+
     public function api_key_field_callback() {
         $value = get_option('bracefox_bw_api_key', '');
         echo '<input type="password" name="bracefox_bw_api_key" value="' . esc_attr($value) . '" class="regular-text" />';
@@ -191,5 +224,12 @@ class Bracefox_BW_Settings {
         $value = get_option('bracefox_bw_rate_limit_window', 60);
         echo '<input type="number" name="bracefox_bw_rate_limit_window" value="' . esc_attr($value) . '" step="10" min="10" max="3600" />';
         echo '<p class="description">' . esc_html__('Time window for rate limiting. Default: 60 seconds', 'bracefox-blessurewijzer') . '</p>';
+    }
+
+    /**
+     * Sanitize checkbox value
+     */
+    public function sanitize_checkbox($value) {
+        return (bool) $value;
     }
 }
