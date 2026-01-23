@@ -37,6 +37,11 @@ class Bracefox_BW_Shortcode {
     public function render($atts) {
         // Check if plugin is enabled
         if (!get_option('bracefox_bw_enabled', true)) {
+            if (current_user_can('manage_options')) {
+                return '<div class="bw-error" style="padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;">' .
+                       esc_html__('Blessurewijzer plugin is disabled in settings.', 'bracefox-blessurewijzer') .
+                       '</div>';
+            }
             return '';
         }
 
@@ -45,7 +50,7 @@ class Bracefox_BW_Shortcode {
 
         // Check if WooCommerce is active
         if (!class_exists('WooCommerce')) {
-            return '<div class="bw-error">' .
+            return '<div class="bw-error" style="padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;">' .
                    esc_html__('Blessurewijzer requires WooCommerce to be installed and activated.', 'bracefox-blessurewijzer') .
                    '</div>';
         }
@@ -54,7 +59,7 @@ class Bracefox_BW_Shortcode {
         $api_key = get_option('bracefox_bw_api_key', '');
         if (empty($api_key)) {
             if (current_user_can('manage_options')) {
-                return '<div class="bw-error">' .
+                return '<div class="bw-error" style="padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;">' .
                        esc_html__('Please configure your OpenAI API key in the Blessurewijzer settings.', 'bracefox-blessurewijzer') .
                        '</div>';
             }

@@ -59,6 +59,50 @@ register_deactivation_hook(__FILE__, 'deactivate_bracefox_blessurewijzer');
 require BRACEFOX_BW_PLUGIN_DIR . 'includes/class-plugin.php';
 
 /**
+ * Render the blessurewijzer shortcode.
+ * This is a standalone function to ensure maximum compatibility.
+ *
+ * @param array $atts Shortcode attributes
+ * @return string Rendered HTML
+ */
+function bracefox_blessurewijzer_shortcode_render($atts) {
+    // Debug mode - show diagnostic info for admins
+    $debug = '';
+    if (current_user_can('manage_options') && isset($_GET['bw_debug'])) {
+        $debug = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:15px;margin:10px 0;font-family:monospace;">';
+        $debug .= '<strong>Blessurewijzer Debug Info:</strong><br>';
+        $debug .= 'Plugin loaded: YES<br>';
+        $debug .= 'Shortcode registered: ' . (shortcode_exists('blessurewijzer') ? 'YES' : 'NO') . '<br>';
+        $debug .= 'WooCommerce active: ' . (class_exists('WooCommerce') ? 'YES' : 'NO') . '<br>';
+        $debug .= 'Plugin enabled: ' . (get_option('bracefox_bw_enabled', true) ? 'YES' : 'NO') . '<br>';
+        $debug .= 'API key set: ' . (!empty(get_option('bracefox_bw_api_key', '')) ? 'YES' : 'NO') . '<br>';
+        $debug .= '</div>';
+    }
+
+    // Load shortcode class if not already loaded
+    if (!class_exists('Bracefox_BW_Shortcode')) {
+        require_once BRACEFOX_BW_PLUGIN_DIR . 'includes/frontend/class-shortcode.php';
+    }
+
+    $shortcode = new Bracefox_BW_Shortcode('bracefox-blessurewijzer', BRACEFOX_BW_VERSION);
+    return $debug . $shortcode->render($atts);
+}
+
+/**
+ * Register shortcode early and reliably.
+ */
+function bracefox_blessurewijzer_register_shortcode() {
+    add_shortcode('blessurewijzer', 'bracefox_blessurewijzer_shortcode_render');
+}
+
+// Register shortcode on init with high priority, or immediately if init already fired
+if (did_action('init')) {
+    bracefox_blessurewijzer_register_shortcode();
+} else {
+    add_action('init', 'bracefox_blessurewijzer_register_shortcode', 1);
+}
+
+/**
  * Begins execution of the plugin.
  *
  * Uses plugins_loaded hook to ensure all plugins are loaded,

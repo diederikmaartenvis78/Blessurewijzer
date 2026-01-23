@@ -85,12 +85,10 @@ class Bracefox_BW_Plugin {
 
     /**
      * Register all of the hooks related to the public-facing functionality.
-     * Hooked to 'init' to ensure WordPress is fully loaded before registering shortcodes.
+     * Note: Shortcode is registered directly in main plugin file for maximum compatibility.
      */
     public function define_frontend_hooks() {
-        $shortcode = new Bracefox_BW_Shortcode($this->get_plugin_name(), $this->get_version());
-        add_shortcode('blessurewijzer', array($shortcode, 'render'));
-
+        // Assets are enqueued conditionally and also directly in shortcode render for page builder compatibility
         $assets = new Bracefox_BW_Assets($this->get_plugin_name(), $this->get_version());
         add_action('wp_enqueue_scripts', array($assets, 'enqueue_styles'));
         add_action('wp_enqueue_scripts', array($assets, 'enqueue_scripts'));
